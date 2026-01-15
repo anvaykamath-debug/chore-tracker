@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chore Tracker</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+  h1 { text-align: center; }
+  section { background: #fff; padding: 15px; margin: 10px auto; max-width: 600px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+  ul { list-style: none; padding: 0; }
+  li { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+  li.done span { text-decoration: line-through; color: gray; }
+  button { margin-left: 5px; cursor: pointer; border-radius: 5px; border: none; padding: 5px 10px; }
+  button:hover { opacity: 0.85; }
+  .add-chore { display: flex; gap: 5px; margin-bottom: 10px; }
+  input, select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+  .chore-info { display: flex; gap: 10px; align-items: center; }
+  .money { font-weight: bold; color: green; }
+  .total { font-weight: bold; margin-top: 5px; text-align: center; font-size: 1.2em; }
+  #reset-btn { display: block; margin: 10px 0 15px 0; padding: 10px 20px; background: #ff6b6b; color: white; font-weight: bold; border-radius: 8px; transition: 0.2s; }
+  #reset-btn:hover { background: #ff4c4c; }
+  .progress-bar-container { background: #ddd; border-radius: 10px; overflow: hidden; height: 20px; margin-bottom: 15px; }
+  .progress-bar { height: 100%; width: 0%; transition: width 0.5s; background: linear-gradient(to right, #4CAF50, #81C784); }
+  canvas#confettiCanvas { position: fixed; pointer-events: none; top:0; left:0; width:100%; height:100%; z-index:9999; }
+</style>
+</head>
+<body>
+<h1>Chore Tracker</h1>
+<div class="total" id="total-earnings">Total Earnings: $0</div>
+<div class="progress-bar-container"><div id="overall-progress" class="progress-bar"></div></div>
+<canvas id="confettiCanvas"></canvas>
+
+<section>
+  <h2>Daily Chores</h2>
+  <div class="add-chore">
+    <input id="daily-input" placeholder="New chore">
+    <input id="daily-money" type="number" placeholder="$ amount" style="width:70px">
+    <select id="day-select">
+      <option>Monday</option>
+      <option>Tuesday</option>
+      <option>Wednesday</option>
+      <option>Thursday</option>
+      <option>Friday</option>
+      <option>Saturday</option>
+      <option>Sunday</option>
+      <option>Daily</option>
+    </select>
+    <button onclick="addDailyChore()" style="background:#4CAF50; color:white; font-weight:bold;">Add</button>
+  </div>
+  <button id="reset-btn" onclick="resetChores()">Reset All Chores</button>
+  <div id="daily-container"></div>
+</section>
+
+<section>
+  <h2>Weekly Chores</h2>
+  <div class="add-chore">
+    <input id="weekly-input" placeholder="New weekly chore">
+    <input id="weekly-money" type="number" placeholder="$ amount" style="width:70px">
+    <button onclick="addWeeklyChore()" style="background:#4CAF50; color:white; font-weight:bold;">Add</button>
+  </div>
+  <ul id="weekly-list"></ul>
+</section>
+
+<audio id="ding-sound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+
+<script>
+const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+let dailyChores = JSON.parse(localStorage.getItem('dailyChores')) || {};
+let weeklyChores = JSON.parse(localStorage.getItem('weeklyChores')) || [];
+let confettiActive = false;
+
+function save() {
+  localStorage.setItem('dailyChores', JSON.stringify(dailyChores));
+  localStorage.setItem('weeklyChores', JSON.stringify(weeklyChores));
+}
+
+function playDing() {
+  document.getElementById('ding-sound').currentTime = 0;
+  document.getElementById('ding-sound').play();
+}
+
+function calculateTotalEarnings() {
+  let total = 0;
+  daysOfWeek.forEach(day => {
+    const chores = dailyChores[day] || [];
+    chores.forEach(chore => { if(chore.done) total += Number(chore.money); });
+  });
+  weeklyChores.forEach(chore => { if(chore.done) total += Number(chore.money); });
+  document.getElementById('total-earnings').innerText = `Total Earnings: $${total}`;
+}
+
+function updateOverallProgress() {
+  let total = 0, done = 0;
+  daysOfWeek.forEach(day => {
+    const chores = dailyChores[day] || [];
+    total += chores.length;
+    done += chores.filter(c => c.done).length;
+  });
+  total += weeklyChores.length;
+  done += weeklyChores.filter(c => c.done).length;
+  const percent = total === 0 ? 0 : (done/total)*100;
+  const bar = document.getElementById('overall-progress');
+  bar.style.width = percent + '%';
+  bar.style.background = `linear-gradient(to right, #4CAF50 ${percent}%, #81C784 ${percent}%)`;
+  if(percent === 100 && !confettiActive){ startConfetti(); confettiActive = true; }
+  if(percent < 100){ confettiActive = false; }
+}
+
+function renderDaily() {
+  const container = document.getElementById('daily-container');
+  container.innerHTML = '';
+  daysOfWeek.forEach(day => {
+    const dayChores = dailyChores[day] || [];
+    const dayDiv = document.createElement('div');
+    dayDiv.innerHTML = `<h3>${day}</h3>`;
+    const ul = document.createElement('ul');
+    dayChores.forEach((chore,i) => {
+      const li = document.createElement('li');
+      li.className = chore.done ? 'done' : '';
+      li.innerHTML = `<div class='chore-info'><span>${chore.name}</span><span class='money'>$${chore.money}</span></div>
+        <input type='checkbox' ${chore.done ? 'checked' : ''} onchange='toggleDaily("${day}",${i})'>
+        <button onclick='removeDaily("${day}",${i})'>Remove</button>`;
+      ul.appendChild(li);
+    });
+    dayDiv.appendChild(ul);
+    container.appendChild(dayDiv);
+  });
+  calculateTotalEarnings();
+  updateOverallProgress();
+}
+
+function renderWeekly() {
+  const list = document.getElementById('weekly-list');
+  list.innerHTML = '';
+  weeklyChores.forEach((chore,i) => {
+    const li = document.createElement('li');
+    li.className = chore.done ? 'done' : '';
+    li.innerHTML = `<div class='chore-info'><span>${chore.name}</span><span class='money'>$${chore.money}</span></div>
+      <input type='checkbox' ${chore.done ? 'checked' : ''} onchange='toggleWeekly(${i})'>
+      <button onclick='removeWeekly(${i})'>Remove</button>`;
+    list.appendChild(li);
+  });
+  updateOverallProgress();
+  calculateTotalEarnings();
+}
+
+function addDailyChore() {
+  const input = document.getElementById('daily-input');
+  const moneyInput = document.getElementById('daily-money');
+  let day = document.getElementById('day-select').value;
+  if(!input.value) return;
+  const choreObj = {name: input.value, money: moneyInput.value || 0, done:false};
+
+  if(day === 'Daily'){
+    daysOfWeek.forEach(d => {
+      if(!dailyChores[d]) dailyChores[d] = [];
+      dailyChores[d].push({...choreObj});
+    });
+  } else {
+    if(!dailyChores[day]) dailyChores[day] = [];
+    dailyChores[day].push(choreObj);
+  }
+  input.value=''; moneyInput.value='';
+  save(); renderDaily();
+}
+
+function addWeeklyChore() {
+  const input = document.getElementById('weekly-input');
+  const moneyInput = document.getElementById('weekly-money');
+  if(!input.value) return;
+  weeklyChores.push({name: input.value, money: moneyInput.value || 0, done:false});
+  input.value=''; moneyInput.value='';
+  save(); renderWeekly();
+}
+
+function toggleDaily(day,i){
+  dailyChores[day][i].done = !dailyChores[day][i].done;
+  if(dailyChores[day][i].done) playDing();
+  save(); renderDaily();
+}
+
+function toggleWeekly(i){
+  weeklyChores[i].done = !weeklyChores[i].done;
+  if(weeklyChores[i].done) playDing();
+  save(); renderWeekly();
+}
+
+function removeDaily(day,i){
+  dailyChores[day].splice(i,1);
+  save(); renderDaily();
+}
+
+function removeWeekly(i){
+  weeklyChores.splice(i,1);
+  save(); renderWeekly();
+}
+
+function resetChores() {
+  daysOfWeek.forEach(day => {
+    if(dailyChores[day]) dailyChores[day].forEach(chore => chore.done = false);
+  });
+  weeklyChores.forEach(chore => chore.done = false);
+  save(); renderDaily(); renderWeekly();
+}
+
+// Simple confetti effect
+function startConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const confetti = [];
+  for(let i=0;i<150;i++){
+    confetti.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, r:Math.random()*6+4, d: Math.random()*100, color:`hsl(${Math.random()*360},100%,50%)`});
+  }
+  let angle = 0;
+  const anim = setInterval(()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    angle += 0.01;
+    confetti.forEach(c => {
+      c.y += Math.cos(angle + c.d) + 1 + c.r/2;
+      c.x += Math.sin(angle);
+      if(c.y > canvas.height){ c.y = -10; c.x = Math.random()*canvas.width; }
+      ctx.beginPath();
+      ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
+      ctx.fillStyle = c.color;
+      ctx.fill();
+    });
+  },16);
+  setTimeout(()=>{ clearInterval(anim); ctx.clearRect(0,0,canvas.width,canvas.height); },3000);
+}
+
+renderDaily();
+renderWeekly();
+</script>
+</body>
+</html>
