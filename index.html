@@ -5,38 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chore Tracker</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
-  h1 { text-align: center; }
-  section { background: #fff; padding: 15px; margin: 10px auto; max-width: 600px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-  ul { list-style: none; padding: 0; }
-  li { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
-  li.done span { text-decoration: line-through; color: gray; }
-  button { margin-left: 5px; cursor: pointer; border-radius: 5px; border: none; padding: 5px 10px; }
-  button:hover { opacity: 0.85; }
-  .add-chore { display: flex; gap: 5px; margin-bottom: 10px; }
-  input, select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
-  .chore-info { display: flex; gap: 10px; align-items: center; }
-  .money { font-weight: bold; color: green; }
-  .total { font-weight: bold; margin-top: 5px; text-align: center; font-size: 1.2em; }
-  #reset-btn { display: block; margin: 10px 0 15px 0; padding: 10px 20px; background: #ff6b6b; color: white; font-weight: bold; border-radius: 8px; transition: 0.2s; }
-  #reset-btn:hover { background: #ff4c4c; }
-  .progress-bar-container { background: #ddd; border-radius: 10px; overflow: hidden; height: 20px; margin-bottom: 15px; }
-  .progress-bar { height: 100%; width: 0%; transition: width 0.5s; background: linear-gradient(to right, #4CAF50, #81C784); }
-  canvas#confettiCanvas { position: fixed; pointer-events: none; top:0; left:0; width:100%; height:100%; z-index:9999; }
+body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+h1 { text-align: center; }
+header { text-align: center; margin-bottom: 20px; }
+.profile-switch { margin: 10px 0; }
+.profile-switch button { margin: 0 5px; padding: 5px 10px; cursor: pointer; border-radius: 5px; border: none; }
+.total { font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+.progress-bar-container { background: #ddd; border-radius: 10px; overflow: hidden; height: 20px; margin-top: 10px; position: relative; }
+.progress-bar { height: 100%; width: 0%; transition: width 0.5s; background: linear-gradient(to right, #4CAF50, #81C784); }
+section { background: #fff; padding: 15px; margin: 10px auto; max-width: 600px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+ul { list-style: none; padding: 0; }
+li { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+li.done span { text-decoration: line-through; color: gray; }
+.chore-info { display: flex; gap: 10px; align-items: center; }
+.money { font-weight: bold; color: green; }
+input, select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+button.add-chore { background: #4CAF50; color: white; font-weight: bold; }
+button.reset-btn { background: #ff6b6b; color: white; font-weight: bold; margin-top: 10px; border-radius: 8px; padding: 10px 20px; }
+button.remove-btn { background: #ff6b6b; color: white; border-radius: 5px; padding: 2px 6px; margin-left:5px; }
+#parentPasswordSection { display:none; margin-top:10px; }
+#parentPasswordSection input { padding:5px; border-radius:4px; border:1px solid #ccc; margin-right:5px; }
 </style>
 </head>
 <body>
-<h1>Chore Tracker</h1>
-<div class="total" id="total-earnings">Total Earnings: $0</div>
-<div class="progress-bar-container"><div id="overall-progress" class="progress-bar"></div></div>
-<canvas id="confettiCanvas"></canvas>
 
-<section>
-  <h2>Daily Chores</h2>
-  <div class="add-chore">
-    <input id="daily-input" placeholder="New chore">
-    <input id="daily-money" type="number" placeholder="$ amount" style="width:70px">
-    <select id="day-select">
+<header>
+  <h1>Chore Tracker</h1>
+  <div class="profile-switch">
+    <button id="kidViewBtn">👧 Kid View</button>
+    <button id="parentViewBtn">👨‍👩‍👧 Parent View</button>
+  </div>
+  <div id="parentPasswordSection">
+    <input type="password" id="parentPasswordInput" placeholder="Enter parent password">
+    <button id="parentPasswordSubmit">Submit</button>
+  </div>
+  <div class="total" id="totalEarnings">Total Earnings: $0</div>
+  <div class="progress-bar-container">
+    <div id="overallProgress" class="progress-bar"></div>
+  </div>
+</header>
+
+<main>
+  <section id="addChoreSection">
+    <h2>Add Daily Chore</h2>
+    <input id="dailyInput" placeholder="Chore name">
+    <input id="dailyMoney" type="number" placeholder="$" style="width:70px">
+    <select id="daySelect">
       <option>Monday</option>
       <option>Tuesday</option>
       <option>Wednesday</option>
@@ -46,193 +60,152 @@
       <option>Sunday</option>
       <option>Daily</option>
     </select>
-    <button onclick="addDailyChore()" style="background:#4CAF50; color:white; font-weight:bold;">Add</button>
-  </div>
-  <button id="reset-btn" onclick="resetChores()">Reset All Chores</button>
-  <div id="daily-container"></div>
-</section>
+    <button class="add-chore" id="addDailyBtn">Add</button>
+  </section>
 
-<section>
-  <h2>Weekly Chores</h2>
-  <div class="add-chore">
-    <input id="weekly-input" placeholder="New weekly chore">
-    <input id="weekly-money" type="number" placeholder="$ amount" style="width:70px">
-    <button onclick="addWeeklyChore()" style="background:#4CAF50; color:white; font-weight:bold;">Add</button>
-  </div>
-  <ul id="weekly-list"></ul>
-</section>
+  <section>
+    <h2>Daily Chores</h2>
+    <div id="dailyContainer"></div>
+  </section>
 
-<audio id="ding-sound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <section>
+    <h2>Weekly Chores</h2>
+    <input id="weeklyInput" placeholder="Chore name">
+    <input id="weeklyMoney" type="number" placeholder="$" style="width:70px">
+    <button class="add-chore" id="addWeeklyBtn">Add</button>
+    <div id="weeklyContainer"></div>
+  </section>
+
+  <button class="reset-btn" id="resetBtn">Reset All Chores</button>
+  <audio id="dingSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" preload="auto"></audio>
+</main>
 
 <script>
+const parentPassword = '1234';
 const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 let dailyChores = JSON.parse(localStorage.getItem('dailyChores')) || {};
 let weeklyChores = JSON.parse(localStorage.getItem('weeklyChores')) || [];
-let confettiActive = false;
+let currentView = localStorage.getItem('view') || 'kid';
 
-function save() {
+function saveData(){
   localStorage.setItem('dailyChores', JSON.stringify(dailyChores));
   localStorage.setItem('weeklyChores', JSON.stringify(weeklyChores));
+  localStorage.setItem('view', currentView);
 }
 
-function playDing() {
-  document.getElementById('ding-sound').currentTime = 0;
-  document.getElementById('ding-sound').play();
+// === View Switching ===
+document.getElementById('kidViewBtn').onclick = ()=>{
+  currentView='kid'; saveData(); render();
+};
+document.getElementById('parentViewBtn').onclick = ()=>{
+  document.getElementById('parentPasswordSection').style.display='block';
+};
+document.getElementById('parentPasswordSubmit').onclick = ()=>{
+  const passInput = document.getElementById('parentPasswordInput').value;
+  if(passInput === parentPassword){
+    currentView='parent'; saveData(); render();
+    document.getElementById('parentPasswordSection').style.display='none';
+    document.getElementById('parentPasswordInput').value='';
+  } else {
+    alert('Incorrect password!');
+  }
+};
+
+function render(){
+  renderDaily(); renderWeekly(); updateTotal(); updateProgress();
+  // Only show add chore section and weekly add button if parent
+  document.getElementById('addChoreSection').style.display=currentView==='parent'?'block':'none';
+  document.getElementById('addWeeklyBtn').style.display=currentView==='parent'?'inline-block':'none';
+  document.getElementById('weeklyInput').style.display=currentView==='parent'?'inline-block':'none';
+  document.getElementById('weeklyMoney').style.display=currentView==='parent'?'inline-block':'none';
+  document.getElementById('resetBtn').style.display=currentView==='parent'?'block':'none';
 }
 
-function calculateTotalEarnings() {
-  let total = 0;
-  daysOfWeek.forEach(day => {
-    const chores = dailyChores[day] || [];
-    chores.forEach(chore => { if(chore.done) total += Number(chore.money); });
-  });
-  weeklyChores.forEach(chore => { if(chore.done) total += Number(chore.money); });
-  document.getElementById('total-earnings').innerText = `Total Earnings: $${total}`;
-}
-
-function updateOverallProgress() {
-  let total = 0, done = 0;
-  daysOfWeek.forEach(day => {
-    const chores = dailyChores[day] || [];
-    total += chores.length;
-    done += chores.filter(c => c.done).length;
-  });
-  total += weeklyChores.length;
-  done += weeklyChores.filter(c => c.done).length;
-  const percent = total === 0 ? 0 : (done/total)*100;
-  const bar = document.getElementById('overall-progress');
-  bar.style.width = percent + '%';
-  bar.style.background = `linear-gradient(to right, #4CAF50 ${percent}%, #81C784 ${percent}%)`;
-  if(percent === 100 && !confettiActive){ startConfetti(); confettiActive = true; }
-  if(percent < 100){ confettiActive = false; }
-}
-
-function renderDaily() {
-  const container = document.getElementById('daily-container');
-  container.innerHTML = '';
-  daysOfWeek.forEach(day => {
-    const dayChores = dailyChores[day] || [];
-    const dayDiv = document.createElement('div');
-    dayDiv.innerHTML = `<h3>${day}</h3>`;
-    const ul = document.createElement('ul');
-    dayChores.forEach((chore,i) => {
-      const li = document.createElement('li');
-      li.className = chore.done ? 'done' : '';
-      li.innerHTML = `<div class='chore-info'><span>${chore.name}</span><span class='money'>$${chore.money}</span></div>
-        <input type='checkbox' ${chore.done ? 'checked' : ''} onchange='toggleDaily("${day}",${i})'>
-        <button onclick='removeDaily("${day}",${i})'>Remove</button>`;
+function renderDaily(){
+  const container=document.getElementById('dailyContainer'); container.innerHTML='';
+  daysOfWeek.forEach(day=>{
+    const chores=dailyChores[day]||[];
+    if(chores.length===0) return;
+    const div=document.createElement('div'); div.innerHTML=`<h3>${day}</h3>`;
+    const ul=document.createElement('ul');
+    chores.forEach((chore,i)=>{
+      const li=document.createElement('li'); li.className=chore.done?'done':'';
+      li.innerHTML=`<span>${chore.name} ($${chore.money})</span>`;
+      if(currentView==='parent'){
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=chore.done;
+        cb.onchange=()=>{chore.done=cb.checked; playDing(); saveData(); render(); checkConfetti();};
+        const removeBtn=document.createElement('button'); removeBtn.textContent='Remove'; removeBtn.className='remove-btn';
+        removeBtn.onclick=()=>{chores.splice(i,1); saveData(); render();};
+        li.prepend(cb); li.appendChild(removeBtn);
+      } else {
+        const notifyBtn=document.createElement('button'); notifyBtn.textContent='Notify Parent';
+        notifyBtn.onclick=()=>alert(`Parent notified: ${chore.name}`);
+        li.appendChild(notifyBtn);
+      }
       ul.appendChild(li);
     });
-    dayDiv.appendChild(ul);
-    container.appendChild(dayDiv);
+    div.appendChild(ul); container.appendChild(div);
   });
-  calculateTotalEarnings();
-  updateOverallProgress();
 }
 
-function renderWeekly() {
-  const list = document.getElementById('weekly-list');
-  list.innerHTML = '';
-  weeklyChores.forEach((chore,i) => {
-    const li = document.createElement('li');
-    li.className = chore.done ? 'done' : '';
-    li.innerHTML = `<div class='chore-info'><span>${chore.name}</span><span class='money'>$${chore.money}</span></div>
-      <input type='checkbox' ${chore.done ? 'checked' : ''} onchange='toggleWeekly(${i})'>
-      <button onclick='removeWeekly(${i})'>Remove</button>`;
-    list.appendChild(li);
+function renderWeekly(){
+  const container=document.getElementById('weeklyContainer'); container.innerHTML='';
+  weeklyChores.forEach((chore,i)=>{
+    const li=document.createElement('li'); li.className=chore.done?'done':'';
+    li.innerHTML=`<span>${chore.name} ($${chore.money})</span>`;
+    if(currentView==='parent'){
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=chore.done;
+      cb.onchange=()=>{chore.done=cb.checked; playDing(); saveData(); render(); checkConfetti();};
+      const removeBtn=document.createElement('button'); removeBtn.textContent='Remove'; removeBtn.className='remove-btn';
+      removeBtn.onclick=()=>{weeklyChores.splice(i,1); saveData(); render();};
+      li.prepend(cb); li.appendChild(removeBtn);
+    }
+    container.appendChild(li);
   });
-  updateOverallProgress();
-  calculateTotalEarnings();
 }
 
-function addDailyChore() {
-  const input = document.getElementById('daily-input');
-  const moneyInput = document.getElementById('daily-money');
-  let day = document.getElementById('day-select').value;
-  if(!input.value) return;
-  const choreObj = {name: input.value, money: moneyInput.value || 0, done:false};
-
-  if(day === 'Daily'){
-    daysOfWeek.forEach(d => {
-      if(!dailyChores[d]) dailyChores[d] = [];
-      dailyChores[d].push({...choreObj});
-    });
-  } else {
-    if(!dailyChores[day]) dailyChores[day] = [];
-    dailyChores[day].push(choreObj);
-  }
-  input.value=''; moneyInput.value='';
-  save(); renderDaily();
+function updateTotal(){
+  let total=0;
+  daysOfWeek.forEach(day=>{(dailyChores[day]||[]).forEach(c=>{if(c.done) total+=Number(c.money);});});
+  weeklyChores.forEach(c=>{if(c.done) total+=Number(c.money);});
+  document.getElementById('totalEarnings').textContent=`Total Earnings: $${total}`;
 }
 
-function addWeeklyChore() {
-  const input = document.getElementById('weekly-input');
-  const moneyInput = document.getElementById('weekly-money');
-  if(!input.value) return;
-  weeklyChores.push({name: input.value, money: moneyInput.value || 0, done:false});
-  input.value=''; moneyInput.value='';
-  save(); renderWeekly();
+function updateProgress(){
+  let total=0,done=0;
+  daysOfWeek.forEach(day=>{ const chores=dailyChores[day]||[]; total+=chores.length; done+=chores.filter(c=>c.done).length; });
+  total+=weeklyChores.length; done+=weeklyChores.filter(c=>c.done).length;
+  const percent=total===0?0:(done/total)*100;
+  document.getElementById('overallProgress').style.width=percent+'%';
 }
 
-function toggleDaily(day,i){
-  dailyChores[day][i].done = !dailyChores[day][i].done;
-  if(dailyChores[day][i].done) playDing();
-  save(); renderDaily();
-}
+function playDing(){ document.getElementById('dingSound').play(); }
+function checkConfetti(){ const progress=parseFloat(document.getElementById('overallProgress').style.width); if(progress>=100) launchConfetti(); }
+function launchConfetti(){ for(let i=0;i<100;i++){ const confetti=document.createElement('div'); confetti.style.position='fixed'; confetti.style.width='6px'; confetti.style.height='6px'; confetti.style.background=['#f94144','#f3722c','#f9c74f','#90be6d','#577590'][Math.floor(Math.random()*5)]; confetti.style.top='0px'; confetti.style.left=Math.random()*window.innerWidth+'px'; confetti.style.opacity=0.8; confetti.style.zIndex=9999; document.body.appendChild(confetti); const fall = confetti.animate([{top:'0px'},{top:window.innerHeight+'px'}],{duration:2000+Math.random()*2000,iterations:1}); fall.onfinish=()=>{confetti.remove();}; } }
 
-function toggleWeekly(i){
-  weeklyChores[i].done = !weeklyChores[i].done;
-  if(weeklyChores[i].done) playDing();
-  save(); renderWeekly();
-}
+// === Add Chores ===
+document.getElementById('addDailyBtn').onclick=()=>{
+  if(currentView!=='parent') return;
+  const name=document.getElementById('dailyInput').value; const money=Number(document.getElementById('dailyMoney').value)||0; const day=document.getElementById('daySelect').value;
+  if(!name) return;
+  const chore={name,money,done:false};
+  if(day==='Daily') daysOfWeek.forEach(d=>{ if(!dailyChores[d]) dailyChores[d]=[]; dailyChores[d].push({...chore}); });
+  else { if(!dailyChores[day]) dailyChores[day]=[]; dailyChores[day].push(chore); }
+  document.getElementById('dailyInput').value=''; document.getElementById('dailyMoney').value=''; saveData(); render();
+};
 
-function removeDaily(day,i){
-  dailyChores[day].splice(i,1);
-  save(); renderDaily();
-}
+document.getElementById('addWeeklyBtn').onclick=()=>{
+  if(currentView!=='parent') return;
+  const name=document.getElementById('weeklyInput').value; const money=Number(document.getElementById('weeklyMoney').value)||0;
+  if(!name) return; weeklyChores.push({name,money,done:false}); document.getElementById('weeklyInput').value=''; document.getElementById('weeklyMoney').value=''; saveData(); render();
+};
 
-function removeWeekly(i){
-  weeklyChores.splice(i,1);
-  save(); renderWeekly();
-}
+document.getElementById('resetBtn').onclick=()=>{
+  daysOfWeek.forEach(day=>{(dailyChores[day]||[]).forEach(c=>c.done=false);});
+  weeklyChores.forEach(c=>c.done=false); saveData(); render();
+};
 
-function resetChores() {
-  daysOfWeek.forEach(day => {
-    if(dailyChores[day]) dailyChores[day].forEach(chore => chore.done = false);
-  });
-  weeklyChores.forEach(chore => chore.done = false);
-  save(); renderDaily(); renderWeekly();
-}
-
-// Simple confetti effect
-function startConfetti() {
-  const canvas = document.getElementById('confettiCanvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const confetti = [];
-  for(let i=0;i<150;i++){
-    confetti.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, r:Math.random()*6+4, d: Math.random()*100, color:`hsl(${Math.random()*360},100%,50%)`});
-  }
-  let angle = 0;
-  const anim = setInterval(()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    angle += 0.01;
-    confetti.forEach(c => {
-      c.y += Math.cos(angle + c.d) + 1 + c.r/2;
-      c.x += Math.sin(angle);
-      if(c.y > canvas.height){ c.y = -10; c.x = Math.random()*canvas.width; }
-      ctx.beginPath();
-      ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
-      ctx.fillStyle = c.color;
-      ctx.fill();
-    });
-  },16);
-  setTimeout(()=>{ clearInterval(anim); ctx.clearRect(0,0,canvas.width,canvas.height); },3000);
-}
-
-renderDaily();
-renderWeekly();
+render();
 </script>
 </body>
 </html>
